@@ -9,8 +9,9 @@ def RankWords(filename):
     bg=ngrams(words,2)
     g.add_edges_from(bg)
     
-    print("Words as nodes: " + g.nodes())
-    Print("Edges between bigrams: " + g.edges())
+    print("Words as nodes: \n",g.nodes())
+    print("Edges between bigrams: \n", g.edges())
+
     
     
 if __name__ == '__main__':
