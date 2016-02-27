@@ -1,5 +1,5 @@
 import nltk
-import networds as nx
+import networkx as nx
 from nltk.util import ngrams
 def RankWords(filename):
     document = open(filename).read()
@@ -9,8 +9,8 @@ def RankWords(filename):
     bg=ngrams(words,2)
     g.add_edges_from(bg)
     
-    g.nodes()
-    g.edges()
+    print("Words as nodes: " + g.nodes())
+    Print("Edges between bigrams: " + g.edges())
     
     
 if __name__ == '__main__':
