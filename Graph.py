@@ -1,26 +1,41 @@
 from Bio import Medline 
 from nltk.corpus import stopwords
+from nltk.corpus import treebank
 import nltk
 import networkx as nx
 import matplotlib.pyplot as plt
+import string
 
 
 from nltk.util import ngrams
 
 stop = stopwords.words('english')
+#this array to save the none noune and adjective word 
+tagged_word =[]
 
-with open("C:\\Users\\Omar\\Documents\\GitHub\\ICLAssignment\\pubmed_result.txt") as handle:
+for word, tag in treebank.tagged_words():
+    if tag != "N" and tag!="ADJ":
+        tagged_word.append(word)
+        
+        
+
+with open("C:\\t\\result.txt") as handle:
     records = Medline.parse(handle)
     
     for record in records:
         g=nx.Graph()
         recordNoStop = ' '
         for wrd in record["AB"].split():
-            if wrd not in stop:recordNoStop  = recordNoStop + wrd + ' '
+            if ((wrd not in stop) and (wrd not in tagged_word)):recordNoStop  = recordNoStop + wrd + ' '
         words=nltk.tokenize.word_tokenize(recordNoStop)
-        g.add_nodes_from(words)
-        bg=ngrams(words,2)
-        g.add_edges_from(bg)
+        
+        #remove punctuation  
+    for c in string.punctuation:
+              if c in words: words.remove(c)
+              
+g.add_nodes_from(words)
+bg=ngrams(words,2)
+g.add_edges_from(bg)
 
 print(nx.shortest_path(g))
 
