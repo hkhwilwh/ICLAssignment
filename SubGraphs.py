@@ -28,16 +28,22 @@ nx.draw(g,with_labels=True,node_size=3000,font_size=8,font_color="navy",node_col
 plt.show()    
 
 
-target = g
-target = nx.complete_graph(3)
-for sub_nodes in itertools.combinations(g.nodes(),len(target.nodes())):
-    subg = g.subgraph(sub_nodes)
-    if nx.is_connected(subg):
-        print subg.edges()
-        plt.figure()
-        nx.draw(subg,with_labels=True,node_size=3000,font_size=8,font_color="navy",node_color="orange")
+
+for sub_node in g.nodes():
+    target = nx.ego_graph(g,sub_node)
+    plt.figure()
+    nx.draw(target,with_labels=True,node_size=3000,font_size=8,font_color="navy",node_color="orange")
+
+#target = g
+#target = nx.complete_graph(3)
+#for sub_nodes in itertools.combinations(g.nodes(),len(target.nodes())):
+#    subg = g.subgraph(sub_nodes)
+#    if nx.is_connected(subg):
+#        print subg.edges()
+#        plt.figure()
+#        nx.draw(subg,with_labels=True,node_size=3000,font_size=8,font_color="navy",node_color="orange")
         
-    plt.show()
+plt.show()
         
 #print(nx.shortest_path(g))
 
