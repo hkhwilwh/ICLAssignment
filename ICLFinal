@@ -1,0 +1,295 @@
+from Bio import Medline
+from nltk.corpus import stopwords
+from nltk.corpus import treebank
+import nltk
+import networkx as nx
+import matplotlib.pyplot as plt
+import xlwt
+
+import operator
+
+from nltk.util import ngrams
+
+def add_sheet(book, name):
+    """
+    Add a sheet with one line of data
+    """
+    value = "This sheet is named: %s" % name
+    sheet = book.add_sheet(name)
+    sheet.write(0,0, value)
+
+
+def add_styled_sheet(book, name):
+    """
+    Add a sheet with styles
+    """
+    value = "This is a styled sheet!"
+    sheet = book.add_sheet(name)
+    style = 'pattern: pattern solid, fore_colour blue;'
+    sheet.row(0).write(0, value, xlwt.Style.easyxf(style))
+
+def writeToExcel(P,R,F,tCount):
+    """"""
+    book = xlwt.Workbook()
+    sheet1 = book.add_sheet("Validation")
+
+    row = sheet1.row(0)
+    row.write(0, 'Precision')
+    row.write(1, 'Recall')
+    row.write(2, 'F-Measure')
+    row.write(3, 'Total Number of Words')
+
+    row = sheet1.row(1)
+    row.write(0, P)
+    row.write(1, R)
+    row.write(2, F)
+    row.write(3, tCount)
+
+    book.save("ICLFinal.xls")
+
+import os
+import random
+result = []
+
+numberOfAbstracts=1
+
+
+'''
+    @:Params:numberOfAbstracts, number of files needed
+    @:return random number
+'''
+def get_RandomNumber(numberOfAbstracts):
+    for x in range (0, numberOfAbstracts):
+        num = random.randint(538, 1450)
+        while num in result:
+            num = random.randint(538, 1450)
+        result.append(num)
+    return result
+
+'''
+    @:Params:filename, taken from the random generate number method
+    @:return abstract for spacific filename
+'''
+def get_Abstract(filename):
+    abstrctFileLoc = ''
+    # Make sure to set the HULTH2003 Folder Location
+    dataDir = '/Users/Hkhwileh/Dropbox/3 Computational Linguistics/Hulth2003/Training/'
+    #dataDir = 'C://Users//Omar//Dropbox//3 Computational Linguistics//Hulth2003//Training//'
+    abstrctFileLoc = dataDir + `filename`+'.abstr'
+    abstract=''
+    #print('Reading file ', abstrctFileLoc)
+    if os.path.isfile(abstrctFileLoc):
+        with open(abstrctFileLoc, 'r') as fs:
+            for x in fs.readlines():
+                abstract = abstract + ' ' + x.strip()
+    return abstract
+
+'''
+    @:Params:filename, taken from the random generate number method
+    @:return list of keyword for spacific filename
+'''
+def get_Keyword(filename):
+    #Make sure to set the HULTH2003 Folder Location
+    dataDir = '/Users/Hkhwileh/Dropbox/3 Computational Linguistics/Hulth2003/Training/'
+    #dataDir = 'C://Users//Omar//Dropbox//3 Computational Linguistics//Hulth2003//Training//'
+    words=''
+    contrFileLoc = dataDir+`filename`+'.uncontr'
+    #print('Reading file ', contrFileLoc)
+    if os.path.isfile(contrFileLoc):
+        with open(contrFileLoc, 'r') as fs:
+            for x in fs.readlines():
+                words = words.lower().strip() + x.lower().replace('\t',' ').replace('\n',' ').replace('\r',' ').replace('-',' ').rstrip()
+                words = words.lstrip()
+    return words.split('; ')
+
+
+#------------------------------------------------------------------------------
+# tokenize the abstrat
+
+stop = stopwords.words('english')
+abstractWords=[]
+#this array to save the none noune and adjective word
+tagged_word =[]
+recordNoStop = ' '
+
+topKeywords = []
+topKeywordsList = []
+reversedPR = []
+g = nx.DiGraph()
+bg=[]
+
+pTotal=0
+rTotal=0
+fTotal=0
+tCountTotal=0
+
+i=0
+for word, tag in treebank.tagged_words():
+    if tag =='NN' or tag=='NNP' or tag=='NNS' or tag=='JJ' or tag=='.' or tag=='?' or tag=='!':
+        if word !='The' and word !='the':
+            tagged_word.append(word.lower())
+    #print(word,tag)
+#tagged_word.append('telecommunication')
+
+filesName = get_RandomNumber(500)
+for file in filesName:
+    #file=1184
+    recordNoStop=''
+    abstract = get_Abstract(file).lower()
+    authorKeywords = get_Keyword(file)
+    abstractWords = nltk.tokenize.word_tokenize(abstract)
+
+    #print("The Abstract: ",abstract)
+    print("The Author Keywords: ",authorKeywords)
+
+    # removing stop words
+    for wordToken in abstractWords:
+        #count the total number of words in all abstracts
+        tCountTotal=tCountTotal+1
+        if ((wordToken not in stop) and (wordToken in tagged_word)):
+            recordNoStop = recordNoStop + wordToken + ' '
+
+    words=nltk.tokenize.word_tokenize(recordNoStop)
+
+    #remove punctuation
+    #puncString = ".,?!()0123456789"
+    puncString = ",()0123456789"
+    for wrd in words:
+        if ((wrd in puncString) or (wrd==',')): words.remove(wrd)
+
+    #TO-DO Tri-grams
+    bg=ngrams(words,2)
+
+    #bigrams list that won't have pairs with "." or "?" or "!"
+    bigrm=[]
+
+    #Loop on ngrams(2) to remove pairs with "." or "?" or "!"
+    for pair in bg:
+        if pair[0]!='.' and pair[1]!='.' and pair[0]!='?' and pair[1]!='?' and pair[0]!='!' and pair[1]!='!':
+            bigrm.append(pair)
+
+    for wrd in words:
+        if ((wrd == '.') or (wrd == '?') or (wrd == '!')):
+            words.remove(wrd)
+
+    # Graph
+    #Words after removing the '.', '?' and '!'
+    g.add_nodes_from(words)
+
+    #print('Number of keywords in abstract: ',g.number_of_nodes())
+    numberOfKeywords = g.number_of_nodes() / 3
+    #print('Number of identified keywords: ', numberOfKeywords)
+
+    g.add_edges_from(bigrm)
+
+    #The code below to display the graph representation
+    #plt.figure()
+    #nx.draw(g,with_labels=True,node_size=3000,font_size=8,font_color="navy",node_color="orange")
+    #plt.show()
+    #print(g.edges())
+
+    #pr = nx.pagerank(g, alpha=0.85, personalization=None,max_iter=100, tol=1.0e-6, nstart=None, weight='weight',dangling=None)
+    pr = nx.pagerank(g)
+    #print(pr)
+
+    sortedPageRankResults=[]
+    sortedPageRankResults = sorted(pr.items(), key=operator.itemgetter(1))
+
+    #reverse the top keywords
+    idx = 0
+    #topKeywords=[]
+    topKeywordsList=[]
+    reversedPR=[]
+    reversedPR=reversed(sortedPageRankResults)
+    for rkw in reversedPR:
+        #topKeywords.append(rkw)
+        #top keywords without page rank weights
+        topKeywordsList.append(rkw[0])
+        #print(rkw[0])
+        idx=idx+1
+        if idx==numberOfKeywords:break
+
+    #---------------------------------------------------
+    # Collapse
+    # removed stop words, skip in case of:{AND, OF}
+    beforeWord=''
+    currWord=''
+    tempWord=''
+    specialStopKeyword=False
+    for abswd in abstractWords:
+        if specialStopKeyword and abswd in topKeywordsList:
+            specialStopKeyword=False
+            topKeywordsList.append(currWord+' '+abswd)
+            topKeywordsList.remove(beforeWord)
+            topKeywordsList.remove(abswd)
+            beforeWord = ''
+            currWord = ''
+            tempWord = ''
+        else:
+            specialStopKeyword = False
+            beforeWord = ''
+            currWord = ''
+            afterWord = ''
+        if (abswd=='of' or abswd=='and') and tempWord!='':
+            if tempWord in topKeywordsList:
+                beforeWord=tempWord
+                currWord=beforeWord+' '+abswd
+                specialStopKeyword=True
+        if tempWord!='' and tempWord in topKeywordsList and abswd in topKeywordsList:
+            topKeywordsList.append(tempWord + ' ' + abswd)
+            topKeywordsList.remove(tempWord)
+            topKeywordsList.remove(abswd)
+
+        tempWord=abswd
+
+
+    print("Final Keywords", topKeywordsList)
+
+    #Calculate Precision, Recall and F-Measure
+
+    TP=0
+    FN=0
+    FP=0
+    print('Calculating TP,FN and FP...')
+    for key in topKeywordsList:
+        if key in authorKeywords:
+            TP=TP+1
+        if key not in authorKeywords:
+            FP=FP+1
+
+    for kw in authorKeywords:
+        for key in topKeywordsList:
+            if kw.lstrip() != key:
+                FN=FN+1
+                break
+    TP=TP*1.0
+    FP=FP*1.0
+    FN=FN*1.0
+    if (TP + FP)!=0:
+        P = (TP / (TP + FP)) * 1.0
+    else:
+        P=0.0
+    if (TP + FN)!=0:
+        R = (TP / (TP + FN)) * 1.0
+    else:
+        R=0.0
+    if (P + R)!=0:
+        F = ((2*R*P)/(P+R)) * 1.0
+    else:
+        F=0.0
+    print('TP=',TP,' FP=',FP,' FN=',FN)
+    print('Precision=',P)
+    print('Recall=',R)
+    print('F-Measure=',F)
+
+    pTotal=pTotal+P
+    rTotal=rTotal+R
+    fTotal=fTotal+F
+    pr.clear()
+    g.clear()
+    words=[]
+    bg=[]
+    abstractWords=[]
+#End of the main loop on HULTH ABSTRACTS
+
+writeToExcel(pTotal,rTotal,fTotal,tCountTotal)
