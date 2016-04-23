@@ -88,7 +88,7 @@ def get_Abstract(filename):
     @:Params:filename, taken from the random generate number method
     @:return list of keyword for spacific filename
 '''
-def get_Keyword(filename):
+def get_KeywordUncontrolled(filename):
     #Make sure to set the HULTH2003 Folder Location
     dataDir = '/Users/Hkhwileh/Dropbox/3 Computational Linguistics/Hulth2003/Training/'
     #dataDir = 'C://Users//Omar//Dropbox//3 Computational Linguistics//Hulth2003//Training//'
@@ -102,7 +102,31 @@ def get_Keyword(filename):
                 words = words.lstrip()
     return words.split('; ')
 
+'''
+    @:Params:filename, taken from the random generate number method
+    @:return list of keyword for spacific filename
+'''
+def get_KeywordConrtolled(filename):
+    #Make sure to set the HULTH2003 Folder Location
+    dataDir = '/Users/Hkhwileh/Dropbox/3 Computational Linguistics/Hulth2003/Training/'
+    #dataDir = 'C://Users//Omar//Dropbox//3 Computational Linguistics//Hulth2003//Training//'
+    words=''
+    contrFileLoc = dataDir+`filename`+'.contr'
+    #print('Reading file ', contrFileLoc)
+    if os.path.isfile(contrFileLoc):
+        with open(contrFileLoc, 'r') as fs:
+            for x in fs.readlines():
+                words = words.lower().strip() + x.lower().replace('\t',' ').replace('\n',' ').replace('\r',' ').replace('-',' ').rstrip()
+                words = words.lstrip()
+    return words.split('; ')
 
+
+
+def removeNegativeAutherKeyword(autherKeyWords,abstract):
+    for keyword in autherKeyWords:
+        if keyword not in abstract:
+            autherKeyWords.remove(keyword)
+    return autherKeyWords
 #------------------------------------------------------------------------------
 # tokenize the abstrat
 
@@ -131,16 +155,30 @@ for word, tag in treebank.tagged_words():
     #print(word,tag)
 #tagged_word.append('telecommunication')
 
-filesName = get_RandomNumber(500)
+filesName = get_RandomNumber(50)
 for file in filesName:
     #file=1184
     recordNoStop=''
     abstract = get_Abstract(file).lower()
-    authorKeywords = get_Keyword(file)
+    authorKeywords = get_KeywordConrtolled(file)
+    authorUnControlledKeywords = get_KeywordUncontrolled(file)
+    print('Controlled Keyword',authorKeywords)
+    '''
+        Merge uncontrolled and controlled auther keyword without duplicate
+    '''
+    for key in authorUnControlledKeywords:
+        if key not in authorKeywords:
+            authorKeywords.append(key)
+
     abstractWords = nltk.tokenize.word_tokenize(abstract)
 
-    #print("The Abstract: ",abstract)
+    print('Uncontrolled Keyword',authorUnControlledKeywords)
+
+    print("The Abstract: ",abstract)
     print("The Author Keywords: ",authorKeywords)
+    authorKeywords = removeNegativeAutherKeyword(authorKeywords,abstract)
+
+    print("The Author Keywords after removal: ",authorKeywords)
 
     # removing stop words
     for wordToken in abstractWords:
@@ -217,6 +255,8 @@ for file in filesName:
     tempWord=''
     specialStopKeyword=False
     for abswd in abstractWords:
+
+
         if specialStopKeyword and abswd in topKeywordsList:
             specialStopKeyword=False
             topKeywordsList.append(currWord+' '+abswd)
